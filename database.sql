@@ -1,90 +1,190 @@
 -- ============================================
--- Watch Auction System - Complete Database Setup  
+-- Watch Auction Database Setup
+-- ============================================
+-- Database untuk sistem lelang jam tangan
+-- Dibuat: 2025-12-07
 -- ============================================
 
-CREATE DATABASE IF NOT EXISTS watch_auction DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE watch_auction;
+-- Create database
+CREATE DATABASE IF NOT EXISTS `watch_auction`
+DEFAULT CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-  id INT(11) NOT NULL AUTO_INCREMENT,
-  username VARCHAR(50) NOT NULL UNIQUE,
-  email VARCHAR(100) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  role ENUM('user', 'admin') DEFAULT 'user',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  INDEX idx_username (username),
-  INDEX idx_email (email)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+USE `watch_auction`;
 
--- Products table
-CREATE TABLE IF NOT EXISTS products (
-  id INT(11) NOT NULL AUTO_INCREMENT,
-  name VARCHAR(200) NOT NULL,
-  description TEXT NOT NULL,
-  start_price DECIMAL(10, 2) NOT NULL,
-  bid_increment DECIMAL(10, 2) NOT NULL,
-  duration INT(11) NOT NULL,
-  start_time BIGINT(20) NOT NULL,
-  end_time BIGINT(20) NOT NULL,
-  current_price DECIMAL(10, 2) NOT NULL,
-  highest_bidder VARCHAR(50) NULL,
-  status ENUM('active', 'ended') DEFAULT 'active',
-  payment_status ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending',
-  payment_method VARCHAR(50) NULL,
-  payment_date TIMESTAMP NULL,
-  created_by INT(11) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ============================================
+-- Table: users
+-- ============================================
+-- Menyimpan data pengguna (admin dan user biasa)
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('admin','user') NOT NULL DEFAULT 'user',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_role` (`role`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Product images table (BLOB storage)
-CREATE TABLE IF NOT EXISTS product_images (
-  id INT(11) NOT NULL AUTO_INCREMENT,
-  product_id INT(11) NOT NULL,
-  image_data LONGBLOB NOT NULL,
-  image_type VARCHAR(50) NOT NULL,
-  image_size INT(11) NOT NULL,
-  is_primary TINYINT(1) DEFAULT 0,
-  display_order INT(11) DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ============================================
+-- Table: products
+-- ============================================
+-- Menyimpan data produk jam yang dilelang
+DROP TABLE IF EXISTS `products`;
+CREATE TABLE `products` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `start_price` decimal(10,2) NOT NULL,
+  `current_price` decimal(10,2) NOT NULL,
+  `bid_increment` decimal(10,2) NOT NULL,
+  `duration` bigint(20) NOT NULL COMMENT 'Duration in milliseconds',
+  `start_time` bigint(20) NOT NULL COMMENT 'Unix timestamp in milliseconds',
+  `end_time` bigint(20) NOT NULL COMMENT 'Unix timestamp in milliseconds',
+  `highest_bidder` varchar(50) DEFAULT NULL,
+  `status` enum('active','ended') DEFAULT 'active',
+  `payment_status` enum('pending','paid') DEFAULT 'pending',
+  `payment_method` varchar(50) DEFAULT NULL,
+  `payment_date` datetime DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_end_time` (`end_time`),
+  KEY `idx_created_by` (`created_by`),
+  KEY `idx_payment_status` (`payment_status`),
+  CONSTRAINT `fk_products_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Bids table
-CREATE TABLE IF NOT EXISTS bids (
-  id INT(11) NOT NULL AUTO_INCREMENT,
-  product_id INT(11) NOT NULL,
-  user_id INT(11) NOT NULL,
-  bid_amount DECIMAL(10, 2) NOT NULL,
-  bid_time BIGINT(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ============================================
+-- Table: product_images
+-- ============================================
+-- Menyimpan gambar produk sebagai BLOB
+DROP TABLE IF EXISTS `product_images`;
+CREATE TABLE `product_images` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `image_data` longblob NOT NULL COMMENT 'Binary image data',
+  `image_type` varchar(50) NOT NULL COMMENT 'MIME type (image/jpeg, image/png, etc)',
+  `image_size` int(11) NOT NULL COMMENT 'File size in bytes',
+  `is_primary` tinyint(1) DEFAULT 0 COMMENT '1 if primary image, 0 otherwise',
+  `display_order` int(11) DEFAULT 0,
+  `uploaded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_product_id` (`product_id`),
+  KEY `idx_is_primary` (`is_primary`),
+  CONSTRAINT `fk_product_images_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Payments table  
-CREATE TABLE IF NOT EXISTS payments (
-  id INT(11) NOT NULL AUTO_INCREMENT,
-  product_id INT(11) NOT NULL,
-  user_id INT(11) NOT NULL,
-  amount DECIMAL(10, 2) NOT NULL,
-  payment_method VARCHAR(50) NOT NULL,
-  payment_status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
-  transaction_id VARCHAR(100) NULL,
-  payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  notes TEXT NULL,
-  PRIMARY KEY (id),
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ============================================
+-- Table: bids
+-- ============================================
+-- Menyimpan riwayat bid untuk setiap produk
+DROP TABLE IF EXISTS `bids`;
+CREATE TABLE `bids` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `bidder_name` varchar(50) NOT NULL,
+  `bid_amount` decimal(10,2) NOT NULL,
+  `bid_time` bigint(20) NOT NULL COMMENT 'Unix timestamp in milliseconds',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_product_id` (`product_id`),
+  KEY `idx_bidder_name` (`bidder_name`),
+  KEY `idx_bid_time` (`bid_time`),
+  CONSTRAINT `fk_bids_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default admin (Password: admin123)
-INSERT INTO users (username, email, password, role) VALUES
-('admin', 'admin@auction.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
+-- ============================================
+-- Table: payments
+-- ============================================
+-- Menyimpan data pembayaran untuk lelang yang dimenangkan
+DROP TABLE IF EXISTS `payments`;
+CREATE TABLE `payments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `payment_method` varchar(50) NOT NULL COMMENT 'e.g., credit_card, paypal, bank_transfer',
+  `payment_status` enum('pending','completed','failed') DEFAULT 'pending',
+  `transaction_id` varchar(100) DEFAULT NULL,
+  `payment_date` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_product_payment` (`product_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_transaction_id` (`transaction_id`),
+  KEY `idx_payment_status` (`payment_status`),
+  CONSTRAINT `fk_payments_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_payments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-SELECT 'Database setup completed!' AS message;
+-- ============================================
+-- Table: reviews
+-- ============================================
+-- Menyimpan review produk (optional, untuk fitur review)
+DROP TABLE IF EXISTS `reviews`;
+CREATE TABLE `reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` int(1) NOT NULL CHECK (`rating` >= 1 AND `rating` <= 5),
+  `comment` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_user_product_review` (`product_id`, `user_id`),
+  KEY `idx_product_id` (`product_id`),
+  KEY `idx_user_id` (`user_id`),
+  CONSTRAINT `fk_reviews_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reviews_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Insert Default Data
+-- ============================================
+
+-- Insert default admin user
+-- Username: admin
+-- Password: admin123 (hashed dengan bcrypt)
+INSERT INTO `users` (`username`, `email`, `password`, `role`) VALUES
+('admin', 'admin@watchauction.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
+
+-- Note: Password hash di atas adalah untuk 'admin123'
+-- Untuk keamanan, sebaiknya diganti setelah login pertama kali
+
+-- Insert sample regular user
+-- Username: testuser
+-- Password: test123
+INSERT INTO `users` (`username`, `email`, `password`, `role`) VALUES
+('testuser', 'test@example.com', '$2y$10$E4k7dJXXHfFJt5n3lGVXLeL5WzQh5qQKzqyFPDg5pR7/.QMmBKhOq', 'user');
+
+-- ============================================
+-- MySQL Configuration Notes
+-- ============================================
+-- Untuk upload gambar BLOB yang besar, pastikan konfigurasi MySQL:
+--
+-- Tambahkan di file my.ini atau my.cnf:
+-- max_allowed_packet=64M
+--
+-- Lokasi file (Windows XAMPP): C:\xampp\mysql\bin\my.ini
+-- Lokasi file (Linux): /etc/mysql/my.cnf
+--
+-- Setelah edit, restart MySQL service
+-- ============================================
+
+-- ============================================
+-- Database Setup Complete!
+-- ============================================
+-- Untuk menggunakan database ini:
+-- 1. Buka phpMyAdmin atau MySQL command line
+-- 2. Import file ini: mysql -u root -p < database.sql
+-- 3. Atau copy-paste isi file ini ke phpMyAdmin > SQL tab
+--
+-- Default Login:
+-- Admin - username: admin, password: admin123
+-- User  - username: testuser, password: test123
+-- ============================================
