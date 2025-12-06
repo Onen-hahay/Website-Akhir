@@ -17,6 +17,7 @@ try {
     $startPrice = isset($data['start_price']) ? (float)$data['start_price'] : 0;
     $bidIncrement = isset($data['bid_increment']) ? (float)$data['bid_increment'] : 0;
     $duration = isset($data['duration']) ? (int)$data['duration'] : 0;
+    $images = isset($data['images']) ? $data['images'] : [];
 
     // Validation
     if (empty($name) || empty($description)) {
@@ -54,18 +55,23 @@ try {
     $userId = $_SESSION['user_id'];
 
     // Insert product
-    $sql = "INSERT INTO products (name, description, start_price, bid_increment, duration, start_time, end_time, current_price, created_by) 
+    $sql = "INSERT INTO products (name, description, start_price, bid_increment, duration, start_time, end_time, current_price, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssddiiidi", $name, $description, $startPrice, $bidIncrement, $duration, $startTime, $endTime, $currentPrice, $userId);
 
     if ($stmt->execute()) {
+        $productId = $conn->insert_id;
+
+        // Note: Images are now uploaded directly to database via upload_product_images.php
+        // This endpoint no longer handles image insertion - images should be uploaded separately
+
         sendJSON([
             'success' => true,
             'message' => 'Product added successfully',
             'data' => [
-                'product_id' => $conn->insert_id
+                'product_id' => $productId
             ]
         ]);
     } else {

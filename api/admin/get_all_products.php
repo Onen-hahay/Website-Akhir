@@ -10,7 +10,7 @@ $conn = getDBConnection();
 
 try {
     // Get all products
-    $sql = "SELECT 
+    $sql = "SELECT
                 p.id,
                 p.name,
                 p.description,
@@ -22,8 +22,11 @@ try {
                 p.current_price,
                 p.highest_bidder,
                 p.status,
+                p.payment_status,
+                p.payment_method,
+                p.payment_date,
                 p.created_at
-            FROM products p 
+            FROM products p
             ORDER BY p.created_at DESC";
     
     $result = $conn->query($sql);
@@ -36,15 +39,35 @@ try {
     if ($result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $isEnded = $currentTime >= (int)$row['end_time'];
-            
+
             if ($isEnded) {
                 $endedCount++;
             } else {
                 $activeCount++;
             }
 
+            $productId = (int)$row['id'];
+
+            // Get product images (now returns image IDs for BLOB retrieval)
+            $imgSql = "SELECT id, is_primary FROM product_images WHERE product_id = ? ORDER BY display_order ASC";
+            $imgStmt = $conn->prepare($imgSql);
+            $imgStmt->bind_param("i", $productId);
+            $imgStmt->execute();
+            $imgResult = $imgStmt->get_result();
+
+            $images = [];
+            $primaryImageId = null;
+            while($imgRow = $imgResult->fetch_assoc()) {
+                $imageId = (int)$imgRow['id'];
+                $images[] = $imageId;
+                if ($imgRow['is_primary'] == 1) {
+                    $primaryImageId = $imageId;
+                }
+            }
+            $imgStmt->close();
+
             $products[] = [
-                'id' => (int)$row['id'],
+                'id' => $productId,
                 'name' => $row['name'],
                 'description' => $row['description'],
                 'startPrice' => (float)$row['start_price'],
@@ -55,7 +78,12 @@ try {
                 'currentPrice' => (float)$row['current_price'],
                 'highestBidder' => $row['highest_bidder'],
                 'status' => $isEnded ? 'ended' : 'active',
-                'createdAt' => $row['created_at']
+                'paymentStatus' => $row['payment_status'] ?? 'pending',
+                'paymentMethod' => $row['payment_method'],
+                'paymentDate' => $row['payment_date'],
+                'createdAt' => $row['created_at'],
+                'images' => $images,
+                'primaryImageId' => $primaryImageId
             ];
         }
     }

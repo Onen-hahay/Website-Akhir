@@ -294,6 +294,21 @@
             color: #721c24;
         }
 
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         .action-buttons {
             display: flex;
             gap: 5px;
@@ -542,6 +557,7 @@
                             <th>Current Price</th>
                             <th>Status</th>
                             <th>Highest Bidder / Winner</th>
+                            <th>Payment Status</th>
                             <th>Start Date</th>
                             <th>End Time</th>
                             <th>Actions</th>
@@ -549,7 +565,7 @@
                     </thead>
                     <tbody id="productsTableBody">
                         <tr>
-                            <td colspan="9" style="text-align: center; padding: 40px;">Loading...</td>
+                            <td colspan="10" style="text-align: center; padding: 40px;">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -590,6 +606,15 @@
                 <div class="form-group">
                     <label>Duration (days) *</label>
                     <input type="number" id="duration" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label style="color: #333; font-weight: bold; margin-bottom: 8px; display: block;">📷 Product Images (Max 5)</label>
+                    <input type="file" id="productImages" multiple accept="image/*" style="width: 100%; padding: 12px; border: 2px dashed #3498db; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 1em;">
+                    <small style="color: #666; display: block; margin-top: 8px; font-size: 0.9em;">
+                        📌 Select up to 5 images (JPG, PNG, GIF, WEBP). Max 5MB per image. First image will be the primary image.
+                    </small>
+                    <div id="imagePreviewContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px;"></div>
                 </div>
 
                 <div style="display: flex; gap: 10px;">

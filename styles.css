@@ -284,12 +284,32 @@ header p {
     margin-top: 20px;
 }
 
+/* Custom scrollbar for thumbnail gallery */
+#imageGallery div::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#imageGallery div::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+#imageGallery div::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+}
+
+#imageGallery div::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.7);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .product-detail-container {
         grid-template-columns: 1fr;
     }
-    
+
     .catalog-grid {
         grid-template-columns: 1fr;
     }

@@ -164,9 +164,15 @@ async function loadWonProducts() {
         const response = await fetch(`${MYBID_API_BASE}/user/get_won_products.php`);
         const result = await response.json();
 
+        console.log('Won Products API Response:', result);
+
         if (result.success && result.data.length > 0) {
             content.innerHTML = result.data.map(product => {
+                console.log('Product:', product);
+                console.log('Payment Status:', product.payment_status);
                 const wonDate = new Date(product.end_time);
+                const paymentStatus = product.payment_status || 'pending';
+                console.log('Resolved Payment Status:', paymentStatus);
 
                 return `
                     <div class="bid-item" style="border-left-color: #27ae60;">
@@ -184,6 +190,21 @@ async function loadWonProducts() {
                                 <span>Total Bids:</span>
                                 <span>${product.total_bids} bids</span>
                             </div>
+                            <div class="bid-detail-row">
+                                <span>Payment Status:</span>
+                                <span class="status-badge ${paymentStatus === 'paid' ? 'status-won' : paymentStatus === 'pending' ? 'status-pending' : 'status-lost'}">
+                                    ${paymentStatus === 'paid' ? '✅ PAID' : paymentStatus === 'pending' ? '⏳ PENDING' : '❌ CANCELLED'}
+                                </span>
+                            </div>
+                            ${paymentStatus === 'pending' ? `
+                                <button onclick="goToPayment(${product.product_id})" style="margin-top: 15px; width: 100%; padding: 12px; background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);">
+                                    💳 Pay Now - $${product.winning_bid.toLocaleString()}
+                                </button>
+                            ` : paymentStatus === 'paid' ? `
+                                <div style="margin-top: 10px; padding: 10px; background: #d4edda; border-radius: 5px; text-align: center; color: #155724; font-weight: bold;">
+                                    ✅ Payment Completed
+                                </div>
+                            ` : ''}
                             <div style="margin-top: 10px; padding: 10px; background: #d4edda; border-radius: 5px; text-align: center; color: #155724; font-weight: bold;">
                                 🎉 Congratulations! You won this auction!
                             </div>
@@ -286,4 +307,9 @@ function formatTimeRemaining(ms) {
 function viewProduct(productId) {
     closeMyBidSidebar();
     showProduct(productId);
+}
+
+// Go to payment page
+function goToPayment(productId) {
+    window.location.href = `payment.html?product_id=${productId}`;
 }

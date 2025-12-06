@@ -124,7 +124,7 @@ function renderProductsTable() {
     console.log('Rendering table with products:', filteredProducts.length);
 
     if (filteredProducts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="no-results">No products found with current filters</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="no-results">No products found with current filters</td></tr>';
         return;
     }
 
@@ -158,6 +158,19 @@ function renderProductsTable() {
             }
         }
 
+        // Payment status display
+        let paymentDisplay = '-';
+        if (isEnded && product.highestBidder) {
+            const paymentStatus = product.paymentStatus || 'pending';
+            if (paymentStatus === 'paid') {
+                paymentDisplay = '<span class="status-badge status-paid">✅ PAID</span>';
+            } else if (paymentStatus === 'pending') {
+                paymentDisplay = '<span class="status-badge status-pending">⏳ PENDING</span>';
+            } else {
+                paymentDisplay = '<span class="status-badge status-cancelled">❌ CANCELLED</span>';
+            }
+        }
+
         return `
             <tr>
                 <td>${product.id}</td>
@@ -166,6 +179,7 @@ function renderProductsTable() {
                 <td>${currentPriceFormatted}</td>
                 <td>${statusBadge}</td>
                 <td>${bidderDisplay}</td>
+                <td>${paymentDisplay}</td>
                 <td>${startDate.toLocaleString()}</td>
                 <td>${endDate.toLocaleString()}</td>
                 <td>
@@ -179,12 +193,46 @@ function renderProductsTable() {
     }).join('');
 }
 
+// Store uploaded images
+let uploadedImages = [];
+
+// Handle image preview
+document.getElementById('productImages').addEventListener('change', function(e) {
+    const files = e.target.files;
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.innerHTML = '';
+
+    if (files.length > 5) {
+        alert('Maximum 5 images allowed');
+        e.target.value = '';
+        return;
+    }
+
+    Array.from(files).forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const imgDiv = document.createElement('div');
+            imgDiv.style.cssText = 'position: relative; border: 2px solid #ddd; border-radius: 5px; overflow: hidden;';
+            imgDiv.innerHTML = `
+                <img src="${event.target.result}" style="width: 100%; height: 100px; object-fit: cover;">
+                <div style="position: absolute; top: 5px; right: 5px; background: ${index === 0 ? '#27ae60' : '#3498db'}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7em;">
+                    ${index === 0 ? 'PRIMARY' : index + 1}
+                </div>
+            `;
+            previewContainer.appendChild(imgDiv);
+        };
+        reader.readAsDataURL(file);
+    });
+});
+
 // Open add product modal
 function openAddModal() {
     editingProductId = null;
+    uploadedImages = [];
     document.getElementById('modalTitle').textContent = 'Add New Product';
     document.getElementById('productForm').reset();
     document.getElementById('productId').value = '';
+    document.getElementById('imagePreviewContainer').innerHTML = '';
     document.getElementById('productModal').classList.add('active');
 }
 
@@ -266,6 +314,7 @@ async function confirmAndPublish() {
 
     try {
         let response;
+        let productId;
 
         if (editingProductId) {
             pendingProductData.product_id = editingProductId;
@@ -274,31 +323,72 @@ async function confirmAndPublish() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pendingProductData)
             });
+            productId = editingProductId;
         } else {
+            // Create product first
             response = await fetch(`${API_BASE}/admin/add_product.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pendingProductData)
             });
+
+            const result = await response.json();
+            if (!result.success) {
+                alert('Error: ' + result.message);
+                return;
+            }
+            productId = result.data.product_id;
         }
 
-        const result = await response.json();
+        // Upload images to database after product creation
+        publishBtn.textContent = 'Uploading images...';
+        await uploadProductImages(productId);
 
-        if (result.success) {
-            alert(editingProductId ? '✅ Product updated successfully!' : '✅ Product published successfully! Auction is now live.');
-            document.getElementById('reviewModal').classList.remove('active');
-            pendingProductData = null;
-            editingProductId = null;
-            loadProducts();
-        } else {
-            alert('Error: ' + result.message);
-        }
+        alert(editingProductId ? '✅ Product updated successfully!' : '✅ Product published successfully! Auction is now live.');
+        document.getElementById('reviewModal').classList.remove('active');
+        pendingProductData = null;
+        editingProductId = null;
+        loadProducts();
+
     } catch (error) {
         console.error('Publish error:', error);
-        alert('Failed to publish product');
+        alert('Failed to publish product: ' + error.message);
     } finally {
         publishBtn.disabled = false;
         publishBtn.textContent = '✓ Confirm & Publish';
+    }
+}
+
+// Upload images to database (BLOB storage)
+async function uploadProductImages(productId) {
+    const fileInput = document.getElementById('productImages');
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('product_id', productId);
+
+    for (let i = 0; i < files.length; i++) {
+        formData.append('images[]', files[i]);
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/upload_product_images.php`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Image upload error:', error);
+        throw error;
     }
 }
 
@@ -306,47 +396,61 @@ async function confirmAndPublish() {
 document.getElementById('productForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const productData = {
-        name: document.getElementById('productName').value.trim(),
-        description: document.getElementById('productDescription').value.trim(),
-        start_price: parseFloat(document.getElementById('startPrice').value),
-        bid_increment: parseFloat(document.getElementById('bidIncrement').value),
-        duration: parseInt(document.getElementById('duration').value) * 86400000
-    };
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Processing...';
 
-    // For editing existing products, skip review and update directly
-    if (editingProductId) {
-        const saveBtn = document.getElementById('saveBtn');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving...';
+    try {
+        const productData = {
+            name: document.getElementById('productName').value.trim(),
+            description: document.getElementById('productDescription').value.trim(),
+            start_price: parseFloat(document.getElementById('startPrice').value),
+            bid_increment: parseFloat(document.getElementById('bidIncrement').value),
+            duration: parseInt(document.getElementById('duration').value) * 86400000
+        };
 
-        try {
-            productData.product_id = editingProductId;
-            const response = await fetch(`${API_BASE}/admin/update_product.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productData)
-            });
+        // For editing existing products, skip review and update directly
+        if (editingProductId) {
+            saveBtn.textContent = 'Saving...';
 
-            const result = await response.json();
+            try {
+                productData.product_id = editingProductId;
+                const response = await fetch(`${API_BASE}/admin/update_product.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData)
+                });
 
-            if (result.success) {
-                alert('✅ Product updated successfully!');
-                closeModal();
-                loadProducts();
-            } else {
-                alert('Error: ' + result.message);
+                const result = await response.json();
+
+                if (result.success) {
+                    // Upload images if any selected
+                    saveBtn.textContent = 'Uploading images...';
+                    await uploadProductImages(editingProductId);
+
+                    alert('✅ Product updated successfully!');
+                    closeModal();
+                    loadProducts();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                alert('Failed to update product: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Preview Product';
             }
-        } catch (error) {
-            console.error('Update error:', error);
-            alert('Failed to update product');
-        } finally {
-            saveBtn.disabled = false;
+        } else {
+            // For new products, show review modal
             saveBtn.textContent = 'Preview Product';
+            showReviewModal(productData);
         }
-    } else {
-        // For new products, show review modal
-        showReviewModal(productData);
+    } catch (error) {
+        console.error('Form submission error:', error);
+        alert('Error: ' + error.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Preview Product';
     }
 });
 

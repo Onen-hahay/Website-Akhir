@@ -128,7 +128,12 @@ function renderCatalog() {
 
         return `
             <div class="product-card" onclick="showProduct(${p.id})">
-                <div class="product-image">⌚</div>
+                <div class="product-image">
+                    ${p.primaryImageId ?
+                        `<img src="${API_BASE}/get_image.php?id=${p.primaryImageId}" alt="${p.name}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                        '⌚'
+                    }
+                </div>
                 <div class="product-info">
                     <div class="product-name">${p.name}</div>
                     <div class="product-details">
@@ -179,7 +184,13 @@ async function showProduct(id) {
         <button class="back-button" onclick="showCatalog()">← Back to Catalog</button>
         
         <div class="product-detail-container">
-            <div class="product-detail-image">⌚</div>
+            <div class="product-detail-image">
+                ${product.images && product.images.length > 0 ? `
+                    <img id="mainImage-${id}" src="${API_BASE}/get_image.php?id=${product.primaryImageId || product.images[0]}" alt="${product.name}"
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); transition: transform 0.3s ease;"
+                         onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">`
+                : '<div style="font-size: 120px; text-align: center; opacity: 0.3;">⌚</div>'}
+            </div>
             <div class="product-detail-info">
                 <h2>${product.name}</h2>
                 <p style="color: #666; margin-bottom: 20px;">${product.description}</p>
@@ -249,6 +260,86 @@ async function showProduct(id) {
                 </div>
             </div>
         `}
+
+        ${product.images && product.images.length > 1 ? `
+            <div id="imageGallery-${id}" style="
+                margin-top: 40px;
+                background: white;
+                padding: 30px;
+                border-radius: 20px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            ">
+                <h3 style="color: #333; margin-bottom: 20px; font-size: 1.5em;">📸 Product Gallery</h3>
+                <div style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                    gap: 15px;
+                ">
+                    ${product.images.map((imgId, idx) => {
+                        const isActive = imgId === (product.primaryImageId || product.images[0]);
+                        return `
+                            <div style="position: relative; cursor: pointer;"
+                                 onclick="
+                                    document.getElementById('mainImage-${id}').src='${API_BASE}/get_image.php?id=${imgId}';
+                                    document.getElementById('mainImage-${id}').scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    document.querySelectorAll('#imageGallery-${id} .thumbnail').forEach(t => {
+                                        t.style.border = '3px solid #ddd';
+                                        t.style.transform = 'scale(1)';
+                                        t.querySelector('.check-badge').style.display = 'none';
+                                    });
+                                    this.querySelector('.thumbnail').style.border = '3px solid #667eea';
+                                    this.querySelector('.thumbnail').style.transform = 'scale(1.05)';
+                                    this.querySelector('.check-badge').style.display = 'flex';
+                                 ">
+                                <img src="${API_BASE}/get_image.php?id=${imgId}"
+                                     alt="${product.name} ${idx + 1}"
+                                     class="thumbnail"
+                                     style="
+                                        width: 100%;
+                                        aspect-ratio: 1;
+                                        object-fit: cover;
+                                        border-radius: 15px;
+                                        border: 3px solid ${isActive ? '#667eea' : '#ddd'};
+                                        transition: all 0.3s ease;
+                                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                                        transform: ${isActive ? 'scale(1.05)' : 'scale(1)'};
+                                     "
+                                     onmouseover="this.style.transform='scale(1.08)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.2)';"
+                                     onmouseout="this.style.transform='${isActive ? 'scale(1.05)' : 'scale(1)'}'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)';">
+                                <div class="check-badge" style="
+                                    position: absolute;
+                                    top: -10px;
+                                    right: -10px;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    color: white;
+                                    width: 32px;
+                                    height: 32px;
+                                    border-radius: 50%;
+                                    display: ${isActive ? 'flex' : 'none'};
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 18px;
+                                    font-weight: bold;
+                                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+                                    border: 3px solid white;
+                                ">✓</div>
+                                <div style="
+                                    position: absolute;
+                                    bottom: 8px;
+                                    left: 8px;
+                                    background: rgba(0,0,0,0.7);
+                                    color: white;
+                                    padding: 4px 10px;
+                                    border-radius: 20px;
+                                    font-size: 0.75em;
+                                    font-weight: bold;
+                                ">${idx + 1} / ${product.images.length}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        ` : ''}
     `;
 }
 
@@ -269,6 +360,12 @@ async function placeBid(productId) {
         if (!sessionResult.logged_in) {
             alert('⚠️ Please login to place a bid!');
             window.location.href = 'login.html';
+            return;
+        }
+
+        // Check if user is admin - admins cannot bid
+        if (sessionResult.data.role === 'admin') {
+            alert('⚠️ Admins are not allowed to place bids!\n\nPlease use a regular user account to participate in auctions.');
             return;
         }
     } catch (error) {

@@ -11,8 +11,28 @@ $result = $conn->query($sql);
 $products = [];
 if ($result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
+        $productId = (int)$row['id'];
+
+        // Get product images (now returns image IDs for BLOB retrieval)
+        $imgSql = "SELECT id, is_primary, display_order FROM product_images WHERE product_id = ? ORDER BY display_order ASC";
+        $imgStmt = $conn->prepare($imgSql);
+        $imgStmt->bind_param("i", $productId);
+        $imgStmt->execute();
+        $imgResult = $imgStmt->get_result();
+
+        $images = [];
+        $primaryImageId = null;
+        while($imgRow = $imgResult->fetch_assoc()) {
+            $imageId = (int)$imgRow['id'];
+            $images[] = $imageId;
+            if ($imgRow['is_primary'] == 1) {
+                $primaryImageId = $imageId;
+            }
+        }
+        $imgStmt->close();
+
         $products[] = [
-            'id' => (int)$row['id'],
+            'id' => $productId,
             'name' => $row['name'],
             'description' => $row['description'],
             'startPrice' => (float)$row['start_price'],
@@ -22,7 +42,9 @@ if ($result->num_rows > 0) {
             'endTime' => (int)$row['end_time'],
             'currentPrice' => (float)$row['current_price'],
             'highestBidder' => $row['highest_bidder'],
-            'status' => $row['status']
+            'status' => $row['status'],
+            'images' => $images,
+            'primaryImageId' => $primaryImageId
         ];
     }
 }

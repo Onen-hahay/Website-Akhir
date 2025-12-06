@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Watch Auction</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .payment-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .payment-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .payment-header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .product-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .product-summary h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.3em;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .payment-methods {
+            margin: 30px 0;
+        }
+
+        .payment-method {
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .payment-method:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .payment-method.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .payment-method input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .method-info {
+            flex: 1;
+        }
+
+        .method-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .method-desc {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .payment-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-top: 20px;
+        }
+
+        .payment-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .payment-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-container">
+            <div class="payment-header">
+                <h1>💳 Complete Payment</h1>
+                <p>Please select a payment method to complete your purchase</p>
+            </div>
+
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorMessage" class="error-message"></div>
+
+            <div class="product-summary" id="productSummary">
+                <h3>Order Summary</h3>
+                <div class="summary-row">
+                    <span>Product:</span>
+                    <span id="productName">Loading...</span>
+                </div>
+                <div class="summary-row">
+                    <span>Winning Bid:</span>
+                    <span id="winningBid">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Amount:</span>
+                    <span id="totalAmount">$0.00</span>
+                </div>
+            </div>
+
+            <div class="payment-methods">
+                <h3 style="color: #333; margin-bottom: 20px;">Select Payment Method</h3>
+
+                <label class="payment-method" onclick="selectPayment('bank_transfer')">
+                    <input type="radio" name="payment_method" value="bank_transfer">
+                    <div class="method-info">
+                        <div class="method-name">🏦 Bank Transfer</div>
+                        <div class="method-desc">Direct bank transfer to our account</div>
+                    </div>
+                </label>
+
+                <label class="payment-method" onclick="selectPayment('credit_card')">
+                    <input type="radio" name="payment_method" value="credit_card">
+                    <div class="method-info">
+                        <div class="method-name">💳 Credit/Debit Card</div>
+                        <div class="method-desc">Pay securely with your card</div>
+                    </div>
+                </label>
+
+                <label class="payment-method" onclick="selectPayment('paypal')">
+                    <input type="radio" name="payment_method" value="paypal">
+                    <div class="method-info">
+                        <div class="method-name">🅿️ PayPal</div>
+                        <div class="method-desc">Pay with your PayPal account</div>
+                    </div>
+                </label>
+
+                <label class="payment-method" onclick="selectPayment('crypto')">
+                    <input type="radio" name="payment_method" value="crypto">
+                    <div class="method-info">
+                        <div class="method-name">₿ Cryptocurrency</div>
+                        <div class="method-desc">Pay with Bitcoin or Ethereum</div>
+                    </div>
+                </label>
+            </div>
+
+            <button class="payment-button" id="payButton" onclick="processPayment()" disabled>
+                Complete Payment
+            </button>
+
+            <div style="text-align: center;">
+                <a href="mybid.html" class="back-link">← Back to My Bids</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="payment.js"></script>
+</body>
+</html>
