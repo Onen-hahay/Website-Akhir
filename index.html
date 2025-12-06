@@ -415,7 +415,7 @@
         // Check if user is logged in
         async function checkUserSession() {
             try {
-                const response = await fetch('http://localhost/finals/api/auth/check_session.php');
+                const response = await fetch('http://localhost/Website-Akhir/api/auth/check_session.php');
                 const result = await response.json();
 
                 if (result.logged_in) {
@@ -443,7 +443,7 @@
             if (!confirm('Are you sure you want to logout?')) return;
             
             try {
-                await fetch('http://localhost/finals/api/auth/logout.php');
+                await fetch('http://localhost/Website-Akhir/api/auth/logout.php');
                 window.location.reload();
             } catch (error) {
                 console.error('Logout error:', error);

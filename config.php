@@ -80,7 +80,7 @@ function requireLogin() {
         sendJSON([
             'success' => false,
             'message' => 'Authentication required',
-            'redirect' => '/finals/login.html'
+            'redirect' => '/Website-Akhir/login.html'
         ], 401);
     }
 }

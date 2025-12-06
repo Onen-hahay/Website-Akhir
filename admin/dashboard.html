@@ -566,7 +566,7 @@
             </div>
             <form id="productForm">
                 <input type="hidden" id="productId">
-                
+
                 <div class="form-group">
                     <label>Product Name *</label>
                     <input type="text" id="productName" required>
@@ -593,10 +593,62 @@
                 </div>
 
                 <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-success" style="flex: 1;" id="saveBtn">Save Product</button>
+                    <button type="submit" class="btn btn-success" style="flex: 1;" id="saveBtn">Preview Product</button>
                     <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Review/Preview Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Review Product Before Publishing</h2>
+                <button class="close-btn" onclick="closeReviewModal()">&times;</button>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="color: #e74c3c; margin-bottom: 15px;">⚠️ Please Review Carefully</h3>
+                <p style="color: #666; margin-bottom: 10px;">Make sure all information is correct before publishing. Once published, the auction will start immediately.</p>
+            </div>
+
+            <div class="form-group">
+                <label style="color: #333; font-weight: bold;">Product Name</label>
+                <div id="reviewName" style="padding: 12px; background: #f8f9fa; border-radius: 5px; color: #333;"></div>
+            </div>
+
+            <div class="form-group">
+                <label style="color: #333; font-weight: bold;">Description</label>
+                <div id="reviewDescription" style="padding: 12px; background: #f8f9fa; border-radius: 5px; color: #333; white-space: pre-wrap;"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label style="color: #333; font-weight: bold;">Starting Price</label>
+                    <div id="reviewStartPrice" style="padding: 12px; background: #f8f9fa; border-radius: 5px; color: #27ae60; font-weight: bold; font-size: 1.2em;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label style="color: #333; font-weight: bold;">Bid Increment</label>
+                    <div id="reviewBidIncrement" style="padding: 12px; background: #f8f9fa; border-radius: 5px; color: #3498db; font-weight: bold; font-size: 1.2em;"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="color: #333; font-weight: bold;">Auction Duration</label>
+                <div id="reviewDuration" style="padding: 12px; background: #f8f9fa; border-radius: 5px; color: #333;"></div>
+            </div>
+
+            <div class="form-group">
+                <label style="color: #333; font-weight: bold;">Auction End Time (Estimated)</label>
+                <div id="reviewEndTime" style="padding: 12px; background: #f8f9fa; border-radius: 5px; color: #e74c3c; font-weight: bold;"></div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeReviewModal()">← Back to Edit</button>
+                <button type="button" class="btn btn-success" style="flex: 2;" onclick="confirmAndPublish()" id="publishBtn">✓ Confirm & Publish</button>
+            </div>
         </div>
     </div>
 

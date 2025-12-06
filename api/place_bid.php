@@ -2,17 +2,31 @@
 // api/place_bid.php
 require_once '../config.php';
 
+// Require user to be logged in
+requireLogin();
+
+// Check if user is admin - admins cannot bid
+$currentUser = getCurrentUser();
+if ($currentUser['role'] === 'admin') {
+    sendJSON([
+        'success' => false,
+        'message' => 'Admins are not allowed to place bids. Please use a regular user account.'
+    ], 403);
+}
+
 $conn = getDBConnection();
+
+// Get logged-in user's username
+$bidderName = $currentUser['username'];
 
 // Ambil data dari request
 $data = json_decode(file_get_contents('php://input'), true);
 
 $productId = isset($data['product_id']) ? (int)$data['product_id'] : 0;
-$bidderName = isset($data['bidder_name']) ? trim($data['bidder_name']) : '';
 $bidAmount = isset($data['bid_amount']) ? (float)$data['bid_amount'] : 0;
 
 // Validasi
-if ($productId <= 0 || empty($bidderName) || $bidAmount <= 0) {
+if ($productId <= 0 || $bidAmount <= 0) {
     echo json_encode([
         'success' => false,
         'message' => 'Invalid input data'

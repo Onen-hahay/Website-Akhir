@@ -1,6 +1,6 @@
 // mybid.js - MyBid Sidebar Logic
 
-const MYBID_API_BASE = 'http://localhost/finals/api';
+const MYBID_API_BASE = 'http://localhost/Website-Akhir/api';
 
 let currentUser = null;
 

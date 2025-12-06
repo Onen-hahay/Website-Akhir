@@ -1,7 +1,7 @@
 // script.js - Connected to PHP Backend
 
 // API Base URL - GANTI SESUAI FOLDER ANDA
-const API_BASE = 'http://localhost/finals/api';
+const API_BASE = 'http://localhost/Website-Akhir/api';
 
 // Product data storage
 let products = [];
@@ -261,6 +261,23 @@ function showCatalog() {
 
 // Place a bid
 async function placeBid(productId) {
+    // Check if user is logged in first
+    try {
+        const sessionCheck = await fetch(`${API_BASE}/auth/check_session.php`);
+        const sessionResult = await sessionCheck.json();
+
+        if (!sessionResult.logged_in) {
+            alert('⚠️ Please login to place a bid!');
+            window.location.href = 'login.html';
+            return;
+        }
+    } catch (error) {
+        console.error('Session check error:', error);
+        alert('⚠️ Please login to place a bid!');
+        window.location.href = 'login.html';
+        return;
+    }
+
     const product = products.find(p => p.id === productId);
     const data = auctionData[productId];
     const bidInput = document.getElementById('bidAmount');
@@ -279,17 +296,11 @@ async function placeBid(productId) {
         return;
     }
 
-    const bidderName = prompt('Enter your name:');
-    if (!bidderName || bidderName.trim() === '') {
-        alert('Name is required!');
-        return;
-    }
-
     // Disable button during submission
     bidButton.disabled = true;
     bidButton.textContent = 'Placing Bid...';
 
-    // Send bid to server
+    // Send bid to server (bidder name will be auto-filled from session)
     try {
         const response = await fetch(`${API_BASE}/place_bid.php`, {
             method: 'POST',
@@ -298,7 +309,6 @@ async function placeBid(productId) {
             },
             body: JSON.stringify({
                 product_id: productId,
-                bidder_name: bidderName.trim(),
                 bid_amount: bidAmount
             })
         });

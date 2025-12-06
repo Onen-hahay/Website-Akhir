@@ -1,6 +1,6 @@
 // admin/admin.js - Admin Dashboard Logic (FULLY FIXED)
 
-const API_BASE = 'http://localhost/finals/api';
+const API_BASE = 'http://localhost/Website-Akhir/api';
 let allProducts = [];
 let filteredProducts = [];
 let editingProductId = null;
@@ -213,7 +213,96 @@ function closeModal() {
     editingProductId = null;
 }
 
-// Save product (add or update)
+// Close review modal
+function closeReviewModal() {
+    document.getElementById('reviewModal').classList.remove('active');
+    // Keep the product form modal open so user can edit
+    document.getElementById('productModal').classList.add('active');
+}
+
+// Temporary storage for product data being reviewed
+let pendingProductData = null;
+
+// Show review/preview modal
+function showReviewModal(productData) {
+    // Store the data for later publishing
+    pendingProductData = productData;
+
+    // Populate review fields
+    document.getElementById('reviewName').textContent = productData.name;
+    document.getElementById('reviewDescription').textContent = productData.description;
+    document.getElementById('reviewStartPrice').textContent = `$${productData.start_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('reviewBidIncrement').textContent = `$${productData.bid_increment.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    const durationDays = Math.floor(productData.duration / 86400000);
+    document.getElementById('reviewDuration').textContent = `${durationDays} day${durationDays > 1 ? 's' : ''}`;
+
+    // Calculate and show estimated end time
+    const endTime = new Date(Date.now() + productData.duration);
+    document.getElementById('reviewEndTime').textContent = endTime.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // Close product form modal and open review modal
+    document.getElementById('productModal').classList.remove('active');
+    document.getElementById('reviewModal').classList.add('active');
+}
+
+// Confirm and publish product
+async function confirmAndPublish() {
+    if (!pendingProductData) {
+        alert('No product data to publish!');
+        return;
+    }
+
+    const publishBtn = document.getElementById('publishBtn');
+    publishBtn.disabled = true;
+    publishBtn.textContent = 'Publishing...';
+
+    try {
+        let response;
+
+        if (editingProductId) {
+            pendingProductData.product_id = editingProductId;
+            response = await fetch(`${API_BASE}/admin/update_product.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pendingProductData)
+            });
+        } else {
+            response = await fetch(`${API_BASE}/admin/add_product.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pendingProductData)
+            });
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(editingProductId ? '✅ Product updated successfully!' : '✅ Product published successfully! Auction is now live.');
+            document.getElementById('reviewModal').classList.remove('active');
+            pendingProductData = null;
+            editingProductId = null;
+            loadProducts();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Publish error:', error);
+        alert('Failed to publish product');
+    } finally {
+        publishBtn.disabled = false;
+        publishBtn.textContent = '✓ Confirm & Publish';
+    }
+}
+
+// Handle form submission - show review instead of saving directly
 document.getElementById('productForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -225,43 +314,39 @@ document.getElementById('productForm').addEventListener('submit', async (e) => {
         duration: parseInt(document.getElementById('duration').value) * 86400000
     };
 
-    const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
+    // For editing existing products, skip review and update directly
+    if (editingProductId) {
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
 
-    try {
-        let response;
-        
-        if (editingProductId) {
+        try {
             productData.product_id = editingProductId;
-            response = await fetch(`${API_BASE}/admin/update_product.php`, {
+            const response = await fetch(`${API_BASE}/admin/update_product.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(productData)
             });
-        } else {
-            response = await fetch(`${API_BASE}/admin/add_product.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productData)
-            });
-        }
 
-        const result = await response.json();
+            const result = await response.json();
 
-        if (result.success) {
-            alert(editingProductId ? 'Product updated successfully!' : 'Product added successfully!');
-            closeModal();
-            loadProducts();
-        } else {
-            alert('Error: ' + result.message);
+            if (result.success) {
+                alert('✅ Product updated successfully!');
+                closeModal();
+                loadProducts();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Update error:', error);
+            alert('Failed to update product');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Preview Product';
         }
-    } catch (error) {
-        console.error('Save error:', error);
-        alert('Failed to save product');
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save Product';
+    } else {
+        // For new products, show review modal
+        showReviewModal(productData);
     }
 });
 
