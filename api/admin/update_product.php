@@ -1,0 +1,93 @@
+<?php
+// api/admin/update_product.php - Update existing product (Admin only)
+
+require_once '../../config.php';
+
+// Require admin access
+requireAdmin();
+
+$conn = getDBConnection();
+
+try {
+    // Get POST data
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    $productId = isset($data['product_id']) ? (int)$data['product_id'] : 0;
+    $name = isset($data['name']) ? sanitizeInput($data['name']) : '';
+    $description = isset($data['description']) ? sanitizeInput($data['description']) : '';
+    $startPrice = isset($data['start_price']) ? (float)$data['start_price'] : 0;
+    $bidIncrement = isset($data['bid_increment']) ? (float)$data['bid_increment'] : 0;
+    $duration = isset($data['duration']) ? (int)$data['duration'] : 0;
+
+    // Validation
+    if ($productId <= 0) {
+        sendJSON([
+            'success' => false,
+            'message' => 'Invalid product ID'
+        ], 400);
+    }
+
+    if (empty($name) || empty($description)) {
+        sendJSON([
+            'success' => false,
+            'message' => 'Name and description are required'
+        ], 400);
+    }
+
+    if ($startPrice <= 0 || $bidIncrement <= 0 || $duration <= 0) {
+        sendJSON([
+            'success' => false,
+            'message' => 'Invalid price, increment, or duration values'
+        ], 400);
+    }
+
+    // Check if product exists
+    $sql = "SELECT * FROM products WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $productId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 0) {
+        sendJSON([
+            'success' => false,
+            'message' => 'Product not found'
+        ], 404);
+    }
+
+    $product = $result->fetch_assoc();
+
+    // Recalculate end time if duration changed
+    $startTime = $product['start_time'];
+    $endTime = $startTime + $duration;
+
+    // Update product
+    $sql = "UPDATE products 
+            SET name = ?, description = ?, start_price = ?, bid_increment = ?, duration = ?, end_time = ? 
+            WHERE id = ?";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssddiis", $name, $description, $startPrice, $bidIncrement, $duration, $endTime, $productId);
+
+    if ($stmt->execute()) {
+        sendJSON([
+            'success' => true,
+            'message' => 'Product updated successfully'
+        ]);
+    } else {
+        sendJSON([
+            'success' => false,
+            'message' => 'Failed to update product'
+        ], 500);
+    }
+
+} catch (Exception $e) {
+    sendJSON([
+        'success' => false,
+        'message' => 'Error: ' . $e->getMessage()
+    ], 500);
+} finally {
+    if (isset($stmt)) $stmt->close();
+    $conn->close();
+}
+?>

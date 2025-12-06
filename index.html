@@ -1,0 +1,480 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luxury Watch Auctions</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .user-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .user-menu button {
+            background: white;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .user-menu button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .user-info {
+            background: white;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-badge {
+            background: #3498db;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+
+        .admin-badge {
+            background: #e74c3c;
+        }
+
+        /* MyBid Button */
+        .mybid-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transition: all 0.3s;
+            display: none;
+        }
+
+        .mybid-button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .mybid-button.show {
+            display: block;
+        }
+
+        /* Sidebar */
+        .mybid-sidebar {
+            position: fixed;
+            top: 0;
+            left: -450px;
+            width: 450px;
+            height: 100vh;
+            background: white;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .mybid-sidebar.active {
+            left: 0;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-sidebar {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .close-sidebar:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .sidebar-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .sidebar-nav button {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .sidebar-nav button:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .sidebar-nav button.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .bid-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .bid-item h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .bid-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .bid-detail-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .bid-amount {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-highest {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-outbid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-won {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-lost {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .profile-section {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 2.5em;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: white;
+            color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .mybid-sidebar {
+                width: 90vw;
+                left: -90vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- MyBid Button (Only visible when logged in) -->
+    <button class="mybid-button" id="mybidButton" onclick="openMyBidSidebar()">
+        📊 MyBid
+    </button>
+
+    <!-- User Menu -->
+    <div class="user-menu" id="userMenu">
+        <button onclick="window.location.href='login.html'">Login</button>
+        <button onclick="window.location.href='register.html'">Register</button>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay" onclick="closeMyBidSidebar()"></div>
+
+    <!-- MyBid Sidebar -->
+    <div class="mybid-sidebar" id="mybidSidebar">
+        <div class="sidebar-header">
+            <h2>📊 My Bidding</h2>
+            <button class="close-sidebar" onclick="closeMyBidSidebar()">×</button>
+        </div>
+
+        <div class="sidebar-nav">
+            <button class="tab-btn active" onclick="switchTab('history')">History</button>
+            <button class="tab-btn" onclick="switchTab('running')">Running</button>
+            <button class="tab-btn" onclick="switchTab('won')">Won</button>
+            <button class="tab-btn" onclick="switchTab('profile')">Profile</button>
+        </div>
+
+        <div class="sidebar-content">
+            <!-- History Tab -->
+            <div id="historyTab" class="tab-content active">
+                <h3 style="margin-bottom: 15px;">Bid History</h3>
+                <div id="historyContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>Loading bid history...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Running Bids Tab -->
+            <div id="runningTab" class="tab-content">
+                <h3 style="margin-bottom: 15px;">Current Running Bids</h3>
+                <div id="runningContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <p>Loading running bids...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Won Tab -->
+            <div id="wonTab" class="tab-content">
+                <h3 style="margin-bottom: 15px;">Products Won</h3>
+                <div id="wonContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏆</div>
+                        <p>Loading won products...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profileTab" class="tab-content">
+                <div id="profileContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <p>Loading profile...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>⌚ Luxury Watch Auctions</h1>
+            <p>Bid on authentic pre-owned luxury timepieces</p>
+        </header>
+
+        <div id="catalog" class="catalog-view">
+            <div class="catalog-grid" id="catalogGrid"></div>
+        </div>
+
+        <div id="productPage" class="product-page"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="mybid.js"></script>
+    <script>
+        // Check if user is logged in
+        async function checkUserSession() {
+            try {
+                const response = await fetch('http://localhost/finals/api/auth/check_session.php');
+                const result = await response.json();
+
+                if (result.logged_in) {
+                    const userMenu = document.getElementById('userMenu');
+                    userMenu.innerHTML = `
+                        <div class="user-info">
+                            <span>Welcome, <strong>${result.data.username}</strong></span>
+                            <span class="user-badge ${result.data.role === 'admin' ? 'admin-badge' : ''}">${result.data.role.toUpperCase()}</span>
+                        </div>
+                        ${result.data.role === 'admin' ? '<button onclick="window.location.href=\'admin/dashboard.html\'">Admin Panel</button>' : ''}
+                        <button onclick="logout()">Logout</button>
+                    `;
+
+                    // Show MyBid button ONLY for regular users (not admin)
+                    if (result.data.role === 'user') {
+                        document.getElementById('mybidButton').classList.add('show');
+                    }
+                }
+            } catch (error) {
+                console.error('Session check error:', error);
+            }
+        }
+
+        async function logout() {
+            if (!confirm('Are you sure you want to logout?')) return;
+            
+            try {
+                await fetch('http://localhost/finals/api/auth/logout.php');
+                window.location.reload();
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        function openMyBidSidebar() {
+            document.getElementById('mybidSidebar').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+            loadMyBidData();
+        }
+
+        function closeMyBidSidebar() {
+            document.getElementById('mybidSidebar').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        function switchTab(tabName) {
+            // Remove active from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Add active to selected tab
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Load data for the tab
+            loadTabData(tabName);
+        }
+
+        checkUserSession();
+    </script>
+</body>
+</html>
